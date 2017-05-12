@@ -70,9 +70,9 @@ static int __init exemple_init (void)
 
 static void __exit exemple_exit (void)
 {
+	cdev_del(& exemple_cdev);
 	device_destroy(exemple_class, exemple_dev);
 	class_destroy(exemple_class);
-	cdev_del(& exemple_cdev);
 	unregister_chrdev_region(exemple_dev, 1);
 }
 

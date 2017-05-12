@@ -1,7 +1,5 @@
 /************************************************************************\
-  Exemples de la formation
-    "Ecriture de drivers et programmation noyau Linux"
-  Chapitre "Appels-systeme"
+  Exercice pII-16
 
   (c) 2005-2017 Christophe Blaess
   http://www.blaess.fr/christophe/
@@ -12,22 +10,23 @@
 	#include <linux/proc_fs.h>
 	#include <linux/sched.h>
 	#include <linux/version.h>
+
 	#include <asm/uaccess.h>
 
 
-	static ssize_t exemple_read (struct file *, char __user *, size_t, loff_t *);
+	static ssize_t exemple_read  (struct file *, char __user *, size_t, loff_t *);
 
-	static const struct file_operations exemple_fops = {
+	static const struct file_operations exemple_proc_fops = {
 		.read   = exemple_read,
 	};
 
 
 static int __init exemple_init (void)
 {
-	struct proc_dir_entry * entry;
-
-	entry = proc_create(THIS_MODULE->name, S_IFREG | 0644, NULL, & exemple_fops);
-	if (entry == NULL)
+	struct proc_dir_entry *dir;
+	if ((dir = proc_mkdir("current", NULL)) == NULL)
+		return -EBUSY;
+	if (proc_create(THIS_MODULE->name, S_IFREG | 0644, dir, & exemple_proc_fops) == NULL)
 		return -EBUSY;
 
 	return 0;
@@ -36,7 +35,7 @@ static int __init exemple_init (void)
 
 static void __exit exemple_exit (void)
 {
-	remove_proc_entry(THIS_MODULE->name, NULL);
+	remove_proc_entry("current", NULL);
 }
 
 
@@ -45,22 +44,24 @@ static ssize_t exemple_read(struct file * filp, char __user * u_buffer, size_t m
 	char buffer[128];
 	int  nb;
 
-	snprintf(buffer, 128, "PID=%u, PPID=%u, Name=%s\n",
-	         current->pid, 
-	         current->real_parent->pid,
-	         current->comm);
+	snprintf(buffer, 128, "%u\n", current->pid);
 
-	nb = strlen(buffer);
+	nb = strlen(buffer) - (*offset);
+	if (nb <= 0)
+		return 0;
 	if (nb > max)
-		return -ENOMEM;
-	if (copy_to_user(u_buffer, buffer, nb) != 0)
+		nb = max;
+	if (copy_to_user(u_buffer, & (buffer[*offset]), nb) != 0)
 		return -EFAULT;
-	return nb; /* ce programme boucle quand on lit avec cat car on ne modifie pas *offset !! */
+	(*offset) += nb;
+
+	return nb;
 }
 
 	module_init(exemple_init);
 	module_exit(exemple_exit);
 
-	MODULE_DESCRIPTION("/proc read callback function.");
+	MODULE_DESCRIPTION("/proc write callback.");
 	MODULE_AUTHOR("Christophe Blaess <Christophe.Blaess@Logilin.fr>");
 	MODULE_LICENSE("GPL");
+

@@ -5,6 +5,7 @@ ifneq (${KERNELRELEASE},)
 	obj-m += exemple-2-03.o
 	obj-m += exemple-2-04.o
 	obj-m += exemple-2-05.o
+	obj-m += current.o
 else
 
 	KERNEL_DIR ?= /lib/modules/$(shell uname -r)/build

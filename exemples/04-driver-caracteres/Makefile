@@ -8,6 +8,8 @@ ifneq (${KERNELRELEASE},)
 	obj-m += exemple-4-06.o
 	obj-m += exemple-4-07.o
 	obj-m += exemple-4-08.o
+	obj-m += compteur.o
+	obj-m += file_msg.o
 
 else
 

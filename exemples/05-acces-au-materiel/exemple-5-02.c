@@ -17,7 +17,7 @@
 	static DECLARE_COMPLETION(exemple_started);
 	static DECLARE_COMPLETION(exemple_stopped);
 
-	static int exemple_stop = 0;
+	static volatile int exemple_stop = 0;
 
 
 int exemple_thread(void * arg)

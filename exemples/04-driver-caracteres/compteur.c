@@ -1,5 +1,5 @@
 /************************************************************************\
-  Exemples de la formation
+  TP compteur
     "Ecriture de drivers et programmation noyau Linux"
   Chapitre "Driver en mode caracteres"
 
@@ -14,6 +14,7 @@
 	#include <linux/fs.h>
 	#include <linux/miscdevice.h>
 	#include <linux/module.h>
+	#include <linux/mutex.h>
 	#include <linux/sched.h>
 
 	#include <asm/uaccess.h>
@@ -33,7 +34,8 @@
 		    .fops           = & fops_exemple,
 	};
 
-	static volatile int current_pid;
+	static volatile int compteur = 0;
+	DEFINE_MUTEX(mtx_compteur);
 
 
 static int __init exemple_init (void)
@@ -51,26 +53,20 @@ static void __exit exemple_exit (void)
 static ssize_t exemple_read(struct file * filp, char * buffer,
                             size_t length, loff_t * offset)
 {
-	char k_buffer[2];
-	unsigned long delay;
+	char k_buffer[256];
 
-	current_pid = current->pid;
+	if (mutex_lock_interruptible(& mtx_compteur) != 0)
+		return -ERESTARTSYS;
 
-	// 10 ticks loop to force collision between simultaneous system calls.
-	delay = jiffies + 10;
-	while (time_before(jiffies, delay))
-		schedule(); // On a preemptible system, cpu_relax() works as well.
-	/* remove this wait loop, and contemplate that collisions arise anyway! */
+	++compteur;
 
-	if (current_pid == current->pid)
-		strcpy(k_buffer, ".");
-	else
-		strcpy(k_buffer, "#");
+	mutex_unlock(& mtx_compteur);
 
 	if (length < 2)
 		return -ENOMEM;
 	if (copy_to_user(buffer, k_buffer, 2) != 0)
 		return -EFAULT;
+
 	return 1;
 }
 
@@ -78,7 +74,7 @@ static ssize_t exemple_read(struct file * filp, char * buffer,
 	module_init(exemple_init);
 	module_exit(exemple_exit);
 
-	MODULE_DESCRIPTION("Unprotected access on a shared variable.");
+	MODULE_DESCRIPTION("Use of a mutex for shared variable protection.");
 	MODULE_AUTHOR("Christophe Blaess <Christophe.Blaess@Logilin.fr>");
 	MODULE_LICENSE("GPL");
 
